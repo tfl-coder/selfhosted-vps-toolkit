@@ -1,0 +1,62 @@
+# Invidious on a 1 GB box: official images + per-container memory caps.
+# Copy .env.example to .env and fill in your own secrets first.
+services:
+  invidious:
+    image: quay.io/invidious/invidious:latest
+    restart: unless-stopped
+    mem_limit: 384m
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      INVIDIOUS_CONFIG: |
+        db:
+          dbname: invidious
+          user: invidious
+          password: ${POSTGRES_PASSWORD}
+          host: invidious-db
+          port: 5432
+        check_tables: true
+        # Set a domain + https_only once your reverse proxy is up.
+        # domain: your.domain.or.ip
+        # https_only: true
+        # After creating your own account, disable public sign-up:
+        # registration_enabled: false
+        hmac_key: ${INVIDIOUS_HMAC_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/stats || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+    depends_on:
+      - invidious-db
+      - invidious-companion
+
+  invidious-companion:
+    image: quay.io/invidious/invidious-companion:latest
+    restart: unless-stopped
+    mem_limit: 640m
+    environment:
+      SERVER_SECRET_KEY: ${INVIDIOUS_COMPANION_SECRET}
+    cap_drop:
+      - ALL
+    read_only: true
+    volumes:
+      - companioncache:/var/tmp/youtubei.js:rw
+    security_opt:
+      - no-new-privileges:true
+
+  invidious-db:
+    image: docker.io/library/postgres:14
+    restart: unless-stopped
+    mem_limit: 256m
+    command: postgres -c shared_buffers=64MB
+    environment:
+      POSTGRES_DB: invidious
+      POSTGRES_USER: invidious
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+
+volumes:
+  postgresdata:
+  companioncache:

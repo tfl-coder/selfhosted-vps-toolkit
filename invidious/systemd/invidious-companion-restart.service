@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart Invidious companion weekly
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/invidious
+ExecStart=/usr/bin/docker compose restart invidious-companion

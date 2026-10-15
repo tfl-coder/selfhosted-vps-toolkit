@@ -1,0 +1,8 @@
+[Unit]
+Description=Pull fresh Invidious images and recreate containers
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/invidious
+ExecStart=/usr/bin/docker compose pull
+ExecStart=/usr/bin/docker compose up -d

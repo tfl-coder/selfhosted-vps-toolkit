@@ -1,0 +1,9 @@
+[Unit]
+Description=Invidious playback health probe
+
+[Service]
+Type=oneshot
+Environment=INSTANCE_URL=https://<YOUR_HOST>:<HTTPS_PORT>
+Environment=COMPOSE_DIR=/opt/invidious
+Environment=ALERT_WEBHOOK=<optional-webhook-url>
+ExecStart=/usr/local/bin/invidious-health.sh

@@ -1,0 +1,80 @@
+# Clash / mihomo 客户端模板 —— 把 <...> 占位符换成你自己的值再导入
+# 要点（都是踩过的坑）：
+# 1) DNS 的 nameserver 必须放“国内可直达的解析”，只写国外 DoH 会让
+#    本应 DIRECT 的国内域名解析失败、整页打不开。见 docs/pitfalls.md。
+# 2) mihomo 内核不要选 Reality 节点（握手不兼容），用 Trojan / Hy2。
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+    - 114.114.114.114
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+
+proxies:
+  - name: Node-Trojan
+    type: trojan
+    server: <SERVER_IP>
+    port: <TROJAN_PORT>
+    password: <TROJAN_PASSWORD>
+    sni: <SERVER_IP_OR_DOMAIN>
+    skip-cert-verify: false
+    udp: true
+  - name: Node-Hy2
+    type: hysteria2
+    server: <SERVER_IP>
+    port: <HY2_PORT>
+    password: <HY2_PASSWORD>
+    sni: <SERVER_IP_OR_DOMAIN>
+    skip-cert-verify: false
+    alpn:
+      - h3
+    up: "30 Mbps"
+    down: "100 Mbps"
+  # Reality 节点保留在模板里仅作参考：xray 系客户端可用，mihomo 不要选
+  - name: Node-Reality
+    type: vless
+    server: <SERVER_IP>
+    port: <REALITY_PORT>
+    uuid: <UUID>
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: <REALITY_DEST_SNI>   # 例如 www.microsoft.com
+    reality-opts:
+      public-key: <REALITY_PUBLIC_KEY>
+      short-id: <REALITY_SHORT_ID>
+    client-fingerprint: chrome
+
+proxy-groups:
+  - name: 节点选择
+    type: select
+    proxies:
+      - Node-Trojan
+      - Node-Hy2
+      - Node-Reality
+      - DIRECT
+
+rules:
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - GEOSITE,CN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,节点选择
